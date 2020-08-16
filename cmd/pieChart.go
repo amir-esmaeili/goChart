@@ -25,21 +25,20 @@ var pieChartCmd = &cobra.Command{
 		if errOut != nil {
 			log.Fatalln(errOut)
 		}
-		parseCsv(path, output)
+		renderChart(path, output)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(pieChartCmd)
+	chartCmd.AddCommand(pieChartCmd)
 	pieChartCmd.Flags().StringP("csv", "f", "./data.csv", "Specify the path of csv file")
 	pieChartCmd.Flags().StringP("output", "o", "./", "Specify the output path")
 }
 
-func parseCsv(path string, output string) {
+func parseCsv(path string) (chart.Values, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		log.Fatalln(err)
-		return
+		return nil, err
 	}
 	csv := csv2.NewReader(file)
 
@@ -50,15 +49,18 @@ func parseCsv(path string, output string) {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			log.Fatalln(err)
+			return nil, err
 		}
 		value, _ := strconv.ParseFloat(row[1], 64)
 		data = append(data, chart.Value{Label: row[0], Value: value})
 	}
-	renderChart(data, output)
-
+	return data, nil
 }
-func renderChart(data []chart.Value, output string)  {
+func renderChart(path string, output string)  {
+	data, err := parseCsv(path)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	pieChart := chart.PieChart{
 		Width: 512,
 		Height: 512,
@@ -66,7 +68,7 @@ func renderChart(data []chart.Value, output string)  {
 	}
 	out, _ := os.Create(output + "/output.png")
 	defer out.Close()
-	err := pieChart.Render(chart.PNG, out)
+	err = pieChart.Render(chart.PNG, out)
 	if err != nil {
 		log.Fatalln(err)
 	}
