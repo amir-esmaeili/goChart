@@ -1,13 +1,9 @@
 package cmd
 
 import (
-	csv2 "encoding/csv"
 	"github.com/spf13/cobra"
-	"github.com/wcharczuk/go-chart"
-	"io"
+	"go-chart/internal"
 	"log"
-	"os"
-	"strconv"
 )
 
 // pieChartCmd represents the pieChart command
@@ -17,15 +13,19 @@ var pieChartCmd = &cobra.Command{
 	Long: `It is a command for goChart program to produce a 
 			pie chart from csv file.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		path, errCsv := cmd.Flags().GetString("csv")
-		output, errOut := cmd.Flags().GetString("output")
-		if errCsv != nil {
-			log.Fatalln(errCsv)
+		path, err := cmd.Flags().GetString("csv")
+		if err != nil {
+			log.Fatalln(err)
 		}
-		if errOut != nil {
-			log.Fatalln(errOut)
+		output, err := cmd.Flags().GetString("output")
+		if err != nil {
+			log.Fatalln(err)
 		}
-		renderChart(path, output)
+		data, err := internal.ParseCsv(path)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		internal.RenderChart(data, output, 0)
 	},
 }
 
@@ -35,41 +35,3 @@ func init() {
 	pieChartCmd.Flags().StringP("output", "o", "./", "Specify the output path")
 }
 
-func parseCsv(path string) (chart.Values, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	csv := csv2.NewReader(file)
-
-	var data []chart.Value
-
-	for {
-		row, err := csv.Read()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-		value, _ := strconv.ParseFloat(row[1], 64)
-		data = append(data, chart.Value{Label: row[0], Value: value})
-	}
-	return data, nil
-}
-func renderChart(path string, output string)  {
-	data, err := parseCsv(path)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	pieChart := chart.PieChart{
-		Width: 512,
-		Height: 512,
-		Values: data,
-	}
-	out, _ := os.Create(output + "/output.png")
-	defer out.Close()
-	err = pieChart.Render(chart.PNG, out)
-	if err != nil {
-		log.Fatalln(err)
-	}
-}

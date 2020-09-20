@@ -15,9 +15,7 @@ limitations under the License.
 */
 package main
 
-import (
-	"go-chart/cmd"
-)
+import "go-chart/cmd"
 
 func main() {
 	cmd.Execute()
